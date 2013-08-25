@@ -13,7 +13,7 @@ physics.start()
 
 physics.setGravity(0, 0)
 
---physics.setDrawMode( "hybrid" )
+physics.setDrawMode( "hybrid" )
 
 --------------------------------------------
 
@@ -22,9 +22,13 @@ local screenW, screenH, halfW = display.contentWidth, display.contentHeight, dis
 
 local imgRectBackground, rectBunker, imgRectTank
 
+local laser, missile, blast, firePointX, firePointX
+
 local numSIdRows = 3
 local numSIdCols = 10
 local sidSpeed = 5
+local newRectGroupLaser = display.newGroup()
+local laserSpeed = 5
 
 local bunkerDoor = 0
 
@@ -33,6 +37,9 @@ local citizenSpeed = 2
 
 local imgRectGroupCitizen = display.newGroup()
 local imgRectGroupSId = display.newGroup()
+
+local collisionDetected = false
+local laserTimerSource
 
 -----------------------------------------------------------------------------------------
 -- BEGINNING OF YOUR IMPLEMENTATION
@@ -48,9 +55,51 @@ function scene:createScene( event )
 
 	math.randomseed( os.time() )
 
+	local function touchHandler( event )
+		if ( event.phase == "ended" ) then
+			missile = display.newRect(firePointX, firePointY, 5, 5)
+			missile.x = firePointX
+			missile.y = firePointY
+			missile.name = "missile"
+			missile:setFillColor( 255 )
+
+			physics.addBody(missile, "static", {friction=0, bounce = 1})
+			missile:addEventListener('collision', collisionHandler)
+
+			transition.to(missile, {time=400, x=event.x, y=event.y, onComplete=
+				function()
+	print("missile completed")
+	print(collisionDetected)
+					if collisionDetected == false and missile ~= nil then
+						blast = display.newCircle( event.x, event.y, 20 )
+						blast:setFillColor(255,255,255)
+						blast.name = "blast"
+						physics.addBody(blast)
+						blast.bodyType = 'static'
+						blast:addEventListener('collision', collisionHandler)
+
+						if missile ~= nil then
+							missile:removeSelf()
+							missile = nil
+						end
+
+						transition.to(blast, {time=800, xScale=1.5, yScale=1.5, alpha=0.0, onComplete=
+							function()
+								blast:removeSelf()
+								blast = nil
+							end
+						})
+					else
+						collisionDetected = false
+					end
+				end
+			})
+		end
+	end
+
 	function moveEnemies()
-		-- Move Enemies
 		imgRectGroupSId.x = imgRectGroupSId.x + sidSpeed
+		--imgRectGroupSId:translate(sidSpeed, 0)
 
 		if((imgRectGroupSId.x + (imgRectGroupSId.width * 0.5)) > (display.contentWidth - 10)) then
 			sidSpeed = -3
@@ -59,6 +108,33 @@ function scene:createScene( event )
 		if((imgRectGroupSId.x - (imgRectGroupSId.width * 0.5)) < 10) then
 			sidSpeed = 3
 		end
+	end
+
+	function moveLasers()
+		local numLasers = newRectGroupLaser.numChildren
+		if(numLasers > 0) then
+			for i = 1, numLasers do
+				newRectGroupLaser[i].y = newRectGroupLaser[i].y + laserSpeed
+			end
+		end
+	end
+
+	function sidFire(e)
+
+		local rndSId = math.random(1, imgRectGroupSId.numChildren)
+		local currentSId = imgRectGroupSId[rndSId]
+		--local currentSId = imgRectGroupSId[21]
+
+		local realSIdX, realSIdY = currentSId:localToContent( 0, 0 )
+--print( "screen: ", rndSId, realSIdX, realSIdY )
+		newRectLaser = display.newRect(realSIdX, realSIdY, 10, 20)
+		newRectLaser.x = realSIdX
+		newRectLaser.y = realSIdX
+		newRectLaser.name = "laser"
+		newRectLaser:setFillColor( 255 )
+
+		newRectGroupLaser:insert( newRectLaser )
+--print(newRectGroupLaser.numChildren)
 	end
 
 	function moveCitizens()
@@ -107,15 +183,18 @@ function scene:createScene( event )
 			imgRectCitizen:setReferencePoint( display.TopLeftReferencePoint )
 
 			bunkerDoor = ((rectBunker.x - rectBunker.width) - imgRectCitizen.width)
-print(bunkerDoor)
 
 			--local rndX = math.random(((rectBunker.x - rectBunker.width) - imgRectCitizen.width))
 			local rndX = math.random(bunkerDoor)
+
 			imgRectCitizen.x = rndX
 			imgRectCitizen.y = screenH - imgRectCitizen.height
 			imgRectCitizen.dir = "R"
 
 			imgRectGroupCitizen:insert( imgRectCitizen )
+
+			physics.addBody(imgRectCitizen, "static", {friction=0, bounce = 1})
+			imgRectCitizen:addEventListener('collision', collisionHandler)
 		end
 
 		group:insert( imgRectGroupCitizen )
@@ -149,14 +228,16 @@ print(bunkerDoor)
 				
 				-- Create an enemy
 				enemyCnt = enemyCnt + 1
+
 				local imgRectSId = display.newImageRect( "images/alien-a-1.png", 64, 64 )
-				imgRectSId.x = topLeft.x + (col * sidWidth) + hPadding
-				imgRectSId.y = topLeft.y + (row * sidHeight) + vPadding
 				imgRectSId:setReferencePoint( display.CenterReferencePoint )
-				imgRectSId:toFront()
-				imgRectSId.name = "sid"
 
 				imgRectGroupSId:insert( imgRectSId )
+
+				imgRectSId.x = topLeft.x + (col * sidWidth) + hPadding
+				imgRectSId.y = topLeft.y + (row * sidHeight) + vPadding
+				imgRectSId:toFront()
+				imgRectSId.name = "sid"
 
 				physics.addBody(imgRectSId, "static", {friction=0, bounce = 1})
 				imgRectSId:addEventListener('collision', collisionHandler)
@@ -178,6 +259,8 @@ print(bunkerDoor)
 		moveEnemies()
 
 		moveCitizens()
+
+		moveLasers()
 	end
 
 
@@ -187,6 +270,7 @@ print(bunkerDoor)
 	imgRectBackground:setReferencePoint( display.TopLeftReferencePoint )
 	imgRectBackground.x = 0
 	imgRectBackground.y = 0
+	imgRectBackground:addEventListener( "touch", touchHandler )
 	group:insert( imgRectBackground )
 	
 	-- create bunker recangle
@@ -204,11 +288,16 @@ print(bunkerDoor)
 	imgRectTank.y = rectBunker.y - (imgRectTank.height + rectBunker.height)
 	group:insert( imgRectTank )
 
+	firePointX = imgRectTank.x + (imgRectTank.width * 0.2)
+	firePointY = imgRectTank.y
+
 	createCitizens()
 
 	createSIds()
 
 	Runtime:addEventListener('enterFrame', update)
+
+	laserTimerSource = timer.performWithDelay(1500, sidFire, 0)
 end
 
 -- Called immediately after scene has moved onscreen:
