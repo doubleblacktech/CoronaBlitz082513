@@ -12,6 +12,18 @@ local widget = require "widget"
 
 --------------------------------------------
 
+-- forward declarations and other locals
+local playBtn
+
+-- 'onRelease' event listener for playBtn
+local function onPlayBtnRelease()
+	
+	-- go to level1.lua scene
+	storyboard.gotoScene( "level1", "fade", 500 )
+	
+	return true	-- indicates successful touch
+end
+
 
 -----------------------------------------------------------------------------------------
 -- BEGINNING OF YOUR IMPLEMENTATION
@@ -26,12 +38,12 @@ function scene:createScene( event )
 	local group = self.view
 
 	-- display a background image
-	local background = display.newImageRect( "images/background.jpg", display.contentWidth, display.contentHeight )
+	local background = display.newImageRect( "images/game-BG.png", display.contentWidth, display.contentHeight )
 	background:setReferencePoint( display.TopLeftReferencePoint )
 	background.x, background.y = 0, 0
 	
 	-- create/position logo/title image on upper-half of the screen
-	local titleLogo = display.newImageRect( "images/logo.png", 264, 42 )
+	local titleLogo = display.newImageRect( "images/title.png", 313, 278 )
 	titleLogo:setReferencePoint( display.CenterReferencePoint )
 	titleLogo.x = display.contentWidth * 0.5
 	titleLogo.y = 100
@@ -47,7 +59,7 @@ function scene:createScene( event )
 	}
 	playBtn:setReferencePoint( display.CenterReferencePoint )
 	playBtn.x = display.contentWidth*0.5
-	playBtn.y = display.contentHeight - 125
+	playBtn.y = display.contentHeight - 50
 	
 	-- all display objects must be inserted into group
 	group:insert( background )
